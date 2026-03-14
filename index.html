@@ -1028,6 +1028,7 @@ function buildYearCalendar(habit, container) {
       const cell = document.createElement('div');
       cell.className = 'cal-day';
       cell.dataset.date = key;
+      cell.dataset.habitId = habit.id;
 
       if (isFuture) {
         cell.classList.add('future');
@@ -1035,6 +1036,7 @@ function buildYearCalendar(habit, container) {
         cell.classList.add('done');
         cell.style.background = habit.color;
         cell.style.boxShadow = `0 0 4px ${habit.color}99`;
+        if (key === todayKey) console.log('TODAY cell colored:', habit.color);
       }
       if (key === todayKey) {
         cell.classList.add('today');
@@ -1048,6 +1050,8 @@ function buildYearCalendar(habit, container) {
   }
 
   container.appendChild(weeksContainer);
+  // Scroll to show today (rightmost column)
+  requestAnimationFrame(() => { container.parentElement.scrollLeft = 9999; });
 }
 
 // ===== RENDER HABITS =====
@@ -1150,13 +1154,8 @@ function renderHabits() {
     wrap.addEventListener('click', e => {
       const cell = e.target.closest('.cal-day');
       if (!cell || cell.classList.contains('future')) return;
-      const { date } = cell.dataset;
-      if (!date) return;
-      // Find which habit card this calendar belongs to
-      const card = cell.closest('.habit-card');
-      if (!card) return;
-      const habitId = card.dataset.id;
-      if (!habitId) return;
+      const { date, habitId } = cell.dataset;
+      if (!date || !habitId) return;
       toggleDay(habitId, date);
     });
   });
@@ -1167,8 +1166,9 @@ function escHtml(s) {
 }
 
 function toggleDay(id, key) {
+  console.log('toggleDay called', id, key);
   const habit = habits.find(h => h.id === id);
-  if (!habit) return;
+  if (!habit) { console.error('habit not found for id:', id); return; }
   const wasOn = !!habit.completions[key];
   if (wasOn) {
     delete habit.completions[key];
@@ -1198,20 +1198,13 @@ function toggleDay(id, key) {
     }
   }
 
-  // Instantly update just the affected calendar cell (no full rebuild)
-  // FIXED: Scope to the specific habit card instead of searching globally
+  // Rebuild the full calendar to guarantee the visual update is correct
   const card = document.querySelector(`.habit-card[data-id="${id}"]`);
-  const cell = card?.querySelector(`.cal-day[data-date="${key}"]`);
-  if (cell) {
-    const nowOn = !wasOn;
-    cell.classList.toggle('done', nowOn);
-    if (nowOn) {
-      cell.style.background = habit.color;
-      cell.style.boxShadow = `0 0 4px ${habit.color}99`;
-    } else {
-      cell.style.background = '';
-      cell.style.boxShadow = '';
-    }
+  console.log('card found:', !!card, 'id was:', id);
+  if (card) {
+    const calContainer = card.querySelector('.cal-container');
+    console.log('calContainer found:', !!calContainer);
+    if (calContainer) buildYearCalendar(habit, calContainer);
   }
 
   // Update streak badge and footer stats
@@ -1577,22 +1570,11 @@ function renderBackfillCal(habit) {
           cell.style.boxShadow = '';
         }
 
-        // Also update the mini calendar on the card
+        // Rebuild the main calendar on the card to guarantee visual update
         const card = document.querySelector(`.habit-card[data-id="${backfillHabitId}"]`);
-        const miniCell = card?.querySelector(`.cal-day[data-date="${key}"]`);
-        if (miniCell) {
-          miniCell.classList.toggle('done', nowOn);
-          if (nowOn) {
-            miniCell.style.background = h.color;
-            miniCell.style.boxShadow = `0 0 4px ${h.color}99`;
-          } else {
-            miniCell.style.background = '';
-            miniCell.style.boxShadow = '';
-          }
-        }
-
-        // Update streak + stats on card
         if (card) {
+          const calContainer = card.querySelector('.cal-container');
+          if (calContainer) buildYearCalendar(h, calContainer);
           const streak = currentStreak(h);
           const badge = card.querySelector('.streak-badge');
           if (badge) {
