@@ -1028,6 +1028,7 @@ function buildYearCalendar(habit, container) {
       const cell = document.createElement('div');
       cell.className = 'cal-day';
       cell.dataset.date = key;
+      cell.dataset.habitId = habit.id;
 
       if (isFuture) {
         cell.classList.add('future');
@@ -1199,9 +1200,15 @@ function toggleDay(id, key) {
   }
 
   // Instantly update just the affected calendar cell (no full rebuild)
-  // FIXED: Scope to the specific habit card instead of searching globally
+  // Try scoped search first, then fallback to data-habit-id search
   const card = document.querySelector(`.habit-card[data-id="${id}"]`);
-  const cell = card?.querySelector(`.cal-day[data-date="${key}"]`);
+  let cell = card?.querySelector(`.cal-day[data-date="${key}"]`);
+  
+  // Fallback: if scoped search didn't work, try global search with habit-id
+  if (!cell) {
+    cell = document.querySelector(`.cal-day[data-habit-id="${id}"][data-date="${key}"]`);
+  }
+  
   if (cell) {
     const nowOn = !wasOn;
     cell.classList.toggle('done', nowOn);
