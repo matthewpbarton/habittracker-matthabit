@@ -1028,7 +1028,6 @@ function buildYearCalendar(habit, container) {
       const cell = document.createElement('div');
       cell.className = 'cal-day';
       cell.dataset.date = key;
-      cell.dataset.habitId = habit.id;
 
       if (isFuture) {
         cell.classList.add('future');
@@ -1151,8 +1150,13 @@ function renderHabits() {
     wrap.addEventListener('click', e => {
       const cell = e.target.closest('.cal-day');
       if (!cell || cell.classList.contains('future')) return;
-      const { date, habitId } = cell.dataset;
-      if (!date || !habitId) return;
+      const { date } = cell.dataset;
+      if (!date) return;
+      // Find which habit card this calendar belongs to
+      const card = cell.closest('.habit-card');
+      if (!card) return;
+      const habitId = card.dataset.id;
+      if (!habitId) return;
       toggleDay(habitId, date);
     });
   });
@@ -1195,7 +1199,9 @@ function toggleDay(id, key) {
   }
 
   // Instantly update just the affected calendar cell (no full rebuild)
-  const cell = document.querySelector(`.cal-day[data-habit-id="${id}"][data-date="${key}"]`);
+  // FIXED: Scope to the specific habit card instead of searching globally
+  const card = document.querySelector(`.habit-card[data-id="${id}"]`);
+  const cell = card?.querySelector(`.cal-day[data-date="${key}"]`);
   if (cell) {
     const nowOn = !wasOn;
     cell.classList.toggle('done', nowOn);
@@ -1209,7 +1215,6 @@ function toggleDay(id, key) {
   }
 
   // Update streak badge and footer stats
-  const card = document.querySelector(`.habit-card[data-id="${id}"]`);
   if (card) {
     const streak = currentStreak(habit);
     const badge = card.querySelector('.streak-badge');
@@ -1573,7 +1578,8 @@ function renderBackfillCal(habit) {
         }
 
         // Also update the mini calendar on the card
-        const miniCell = document.querySelector(`.cal-day[data-habit-id="${backfillHabitId}"][data-date="${key}"]`);
+        const card = document.querySelector(`.habit-card[data-id="${backfillHabitId}"]`);
+        const miniCell = card?.querySelector(`.cal-day[data-date="${key}"]`);
         if (miniCell) {
           miniCell.classList.toggle('done', nowOn);
           if (nowOn) {
@@ -1586,7 +1592,6 @@ function renderBackfillCal(habit) {
         }
 
         // Update streak + stats on card
-        const card = document.querySelector(`.habit-card[data-id="${backfillHabitId}"]`);
         if (card) {
           const streak = currentStreak(h);
           const badge = card.querySelector('.streak-badge');
