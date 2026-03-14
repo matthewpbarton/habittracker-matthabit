@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>MattHabit</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #000000;
+      --surface: #111111;
+      --surface2: #1c1c1e;
+      --surface3: #2c2c2e;
+      --border: #2c2c2e;
+      --text: #ffffff;
+      --text2: #ebebf599;
+      --text3: #ebebf54d;
+      --purple: #bf5af2;
+      --purple-dim: #bf5af230;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+    body { overflow-x: hidden; }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 0; background: transparent; }
+
+    /* ===== APP SHELL ===== */
+    #app {
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ===== NAV BAR ===== */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      padding: calc(var(--safe-top) + 12px) 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .navbar-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+    .navbar-title span { color: var(--purple); }
+    .navbar-actions { display: flex; gap: 8px; align-items: center; }
+    .nav-btn {
+      width: 36px; height: 36px;
+      border: none;
+      background: var(--surface3);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--text);
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn:active { transform: scale(0.92); background: var(--surface2); }
+    .nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-btn.add-btn {
+      background: var(--purple);
+      width: 32px; height: 32px;
+    }
+    .nav-btn.add-btn svg { width: 16px; height: 16px; stroke-width: 2.5; }
+
+    /* ===== MAIN CONTENT ===== */
+    .main {
+      flex: 1;
+      padding: 16px 16px calc(var(--safe-bottom) + 24px);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 60px 32px;
+      text-align: center;
+    }
+    .empty-icon {
+      width: 72px; height: 72px;
+      background: var(--surface2);
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+    }
+    .empty-state h2 { font-size: 20px; font-weight: 600; }
+    .empty-state p { font-size: 14px; color: var(--text2); line-height: 1.5; }
+    .empty-cta {
+      margin-top: 8px;
+      padding: 12px 28px;
+      background: var(--purple);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .empty-cta:active { opacity: 0.8; transform: scale(0.97); }
+
+    /* ===== HABIT CARD ===== */
+    .habit-card {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 14px 14px 12px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .habit-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--habit-color, var(--purple));
+      opacity: 0.8;
+    }
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .card-header-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .habit-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--habit-color, var(--purple));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      opacity: 0.9;
+    }
+    .habit-info { flex: 1; min-width: 0; }
+    .habit-name {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .habit-desc {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .check-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 2px solid; /* color set inline */
+      background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    .check-btn:active { transform: scale(0.88); }
+    .check-btn svg {
+      width: 16px; height: 16px;
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.2s, opacity 0.2s, transform 0.2s;
+    }
+    .check-btn.done svg {
+      stroke: white !important;
+      transform: scale(1.1);
+    }
+
+    /* ===== STREAK BAR ===== */
+    .streak-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .streak-badge {
+      font-size: 11px;
+      font-weight: 700;
+      /* color and background set inline via JS */
+      padding: 3px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.2px;
+    }
+    .streak-label { font-size: 11px; color: var(--text3); }
+
+    /* ===== YEAR CALENDAR GRID ===== */
+    .calendar-wrap {
+      position: relative;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -2px;
+      padding: 0 2px;
+    }
+    .calendar-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5px;
+    }
+    .cal-month-labels {
+      display: grid;
+      gap: 1.5px;
+      margin-bottom: 2px;
+    }
+    .cal-month-label {
+      font-size: 8px;
+      color: var(--text3);
+      font-weight: 500;
+      text-align: left;
+      padding-left: 1px;
+    }
+    .calendar-weeks {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5px;
+    }
+    .cal-week {
+      display: flex;
+      gap: 1.5px;
+    }
+    .cal-day {
+      width: 10px;
+      height: 10px;
+      border-radius: 2.5px;
+      background: var(--surface3);
+      flex-shrink: 0;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cal-day:not(.future):active { transform: scale(1.4); }
+    .cal-day.done {
+      /* color set directly via inline style in JS - no CSS variable needed */
+    }
+    .cal-day.today {
+      /* outline set directly via inline style in JS */
+    }
+    .cal-day.future { background: var(--surface3); opacity: 0.3; cursor: default; }
+    .cal-day.empty { background: transparent; }
+
+    /* ===== CARD FOOTER ===== */
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 0.5px solid var(--border);
+    }
+    .card-stat { font-size: 11px; color: var(--text3); }
+    .card-stat strong { color: var(--text2); font-weight: 600; }
+    .card-actions { display: flex; gap: 8px; }
+    .card-action-btn {
+      width: 28px; height: 28px;
+      border: none;
+      background: var(--surface3);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--text2);
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card-action-btn:active { transform: scale(0.9); }
+    .card-action-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .card-action-btn.delete-btn:active { background: #ff3b3040; color: #ff3b30; }
+
+    /* ===== MODAL OVERLAY ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-sheet {
+      width: 100%;
+      max-width: 430px;
+      margin: 0 auto;
+      background: var(--surface2);
+      border-radius: 20px 20px 0 0;
+      padding: 0 0 calc(var(--safe-bottom) + 16px);
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 95vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .modal-overlay.open .modal-sheet { transform: translateY(0); }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--surface3);
+      border-radius: 2px;
+      margin: 10px auto 0;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 12px;
+    }
+    .modal-title { font-size: 17px; font-weight: 700; }
+    .modal-close {
+      width: 30px; height: 30px;
+      border: none;
+      background: var(--surface3);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--text2);
+      font-size: 14px;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .modal-close:active { background: var(--surface); }
+
+    /* ===== FORM ===== */
+    .form-section {
+      padding: 0 20px;
+      margin-bottom: 8px;
+    }
+    .form-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+    .form-group {
+      background: var(--surface3);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .form-field {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px;
+      gap: 10px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .form-field:last-child { border-bottom: none; }
+    .form-label {
+      font-size: 14px;
+      color: var(--text2);
+      flex-shrink: 0;
+      min-width: 80px;
+    }
+    .form-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      text-align: right;
+    }
+    .form-input::placeholder { color: var(--text3); }
+    .form-input.left { text-align: left; }
+
+    /* Stepper */
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .step-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .step-btn:active { transform: scale(0.9); }
+    .step-val { font-size: 15px; font-weight: 600; min-width: 20px; text-align: center; }
+
+    /* Chevron select */
+    .form-select-row {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .form-select-val { font-size: 15px; color: var(--text2); margin-left: auto; margin-right: 6px; }
+    .chevron { width: 12px; height: 12px; fill: none; stroke: var(--text3); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ===== ICON PICKER ===== */
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .icon-option {
+      aspect-ratio: 1;
+      background: var(--surface3);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+      border: 2px solid transparent;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .icon-option:active { transform: scale(0.9); }
+    .icon-option.selected {
+      border-color: var(--purple);
+      background: var(--purple-dim);
+    }
+    .more-icons-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--surface3);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--purple);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .more-icons-btn:active { background: var(--surface); }
+
+    /* ===== COLOR PICKER ===== */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
+    }
+    .color-option {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.15s;
+      border: 2.5px solid transparent;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+    }
+    .color-option:active { transform: scale(0.88); }
+    .color-option.selected::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+    }
+
+    /* ===== SUBMIT BTN ===== */
+    .submit-btn {
+      margin: 16px 20px 0;
+      width: calc(100% - 40px);
+      padding: 15px;
+      background: var(--purple);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .submit-btn:active { opacity: 0.85; transform: scale(0.98); }
+
+    /* ===== STATS MODAL ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 0 20px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: var(--surface3);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .stat-card .stat-num {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    .stat-card .stat-name {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    /* ===== SETTINGS MODAL ===== */
+    .settings-list { padding: 0 20px; }
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 0.5px solid var(--border);
+      font-size: 15px;
+    }
+    .settings-item:last-child { border-bottom: none; }
+    .settings-item-right { color: var(--text2); font-size: 14px; }
+
+    /* ===== TOGGLE ===== */
+    .toggle {
+      width: 48px; height: 28px;
+      background: var(--surface3);
+      border-radius: 14px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .toggle.on { background: #30d158; }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 24px; height: 24px;
+      background: white;
+      border-radius: 50%;
+      top: 2px; left: 2px;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .toggle.on::after { transform: translateX(20px); }
+
+    /* ===== CONFIRM MODAL ===== */
+    .confirm-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .confirm-modal.open { opacity: 1; pointer-events: all; }
+    .confirm-box {
+      background: var(--surface2);
+      border-radius: 16px;
+      padding: 24px 20px 16px;
+      width: 100%;
+      max-width: 280px;
+      text-align: center;
+      transform: scale(0.9);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .confirm-modal.open .confirm-box { transform: scale(1); }
+    .confirm-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .confirm-box p { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 20px; }
+    .confirm-btns { display: flex; gap: 10px; }
+    .confirm-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .confirm-btn:active { opacity: 0.8; transform: scale(0.96); }
+    .confirm-btn.cancel { background: var(--surface3); color: var(--text); }
+    .confirm-btn.danger { background: #ff3b30; color: white; }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 20px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 500;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ===== RIPPLE ===== */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: scale(0);
+      animation: ripple-anim 0.5s linear;
+      pointer-events: none;
+    }
+    @keyframes ripple-anim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* ===== CARD ENTER ANIMATION ===== */
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .habit-card { animation: card-in 0.3s ease forwards; }
+
+    /* ===== DATE HEADER ===== */
+    .date-header {
+      text-align: center;
+      padding: 4px 0 0;
+    }
+    .date-header .date-day {
+      font-size: 13px;
+      color: var(--text2);
+      font-weight: 400;
+    }
+
+    /* ===== BACKFILL CALENDAR ===== */
+    .backfill-month { margin-bottom: 20px; }
+    .backfill-month-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 8px;
+      letter-spacing: -0.1px;
+    }
+    .backfill-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .backfill-dow {
+      font-size: 10px;
+      color: var(--text3);
+      text-align: center;
+      font-weight: 500;
+      padding-bottom: 2px;
+    }
+    .backfill-day {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: var(--surface3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      color: var(--text2);
+      position: relative;
+    }
+    .backfill-day:active { transform: scale(0.88); }
+    .backfill-day.done {
+      color: white;
+      /* background and box-shadow set inline via JS */
+    }
+    .backfill-day.today-cell {
+      /* outline set inline via JS */
+      outline-offset: 1px;
+      color: var(--text);
+      font-weight: 700;
+    }
+    .backfill-day.empty { background: transparent; cursor: default; }
+    .backfill-day.future { opacity: 0.2; cursor: default; pointer-events: none; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (min-width: 430px) {
+      .modal-overlay { align-items: center; }
+      .modal-sheet {
+        border-radius: 20px;
+        margin: 20px;
+        max-height: 90vh;
+      }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- NAV -->
+  <nav class="navbar">
+    <button class="nav-btn" id="settingsBtn" aria-label="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div class="navbar-title">Matt<span>Habit</span></div>
+    <div class="navbar-actions">
+      <button class="nav-btn" id="statsBtn" aria-label="Stats">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </button>
+      <button class="nav-btn add-btn" id="addBtn" aria-label="Add habit">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- DATE HEADER -->
+  <div class="date-header">
+    <div class="date-day" id="dateLabel"></div>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main" id="habitList"></main>
+
+  <!-- EMPTY STATE (injected by JS) -->
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="habitModal">
+  <div class="modal-sheet" id="habitModalSheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">New Habit</div>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+
+    <form id="habitForm" autocomplete="off">
+      <!-- Name & Description -->
+      <div class="form-section">
+        <div class="form-group">
+          <div class="form-field">
+            <label class="form-label">Name</label>
+            <input class="form-input" id="f-name" type="text" placeholder="Habit name" maxlength="40" required>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Note</label>
+            <input class="form-input" id="f-desc" type="text" placeholder="Optional description" maxlength="60">
+          </div>
+        </div>
+      </div>
+
+      <!-- Goal & Reminders -->
+      <div class="form-section">
+        <div class="form-section-title">Options</div>
+        <div class="form-group">
+          <div class="form-field">
+            <span class="form-label">Streak goal</span>
+            <div class="stepper">
+              <button type="button" class="step-btn" data-step="-1" data-target="f-goal">−</button>
+              <span class="step-val" id="f-goal-val">30</span>
+              <button type="button" class="step-btn" data-step="1" data-target="f-goal">+</button>
+            </div>
+            <input type="hidden" id="f-goal" value="30">
+          </div>
+          <div class="form-field">
+            <span class="form-label">Per day</span>
+            <div class="stepper">
+              <button type="button" class="step-btn" data-step="-1" data-target="f-perday">−</button>
+              <span class="step-val" id="f-perday-val">1</span>
+              <button type="button" class="step-btn" data-step="1" data-target="f-perday">+</button>
+            </div>
+            <input type="hidden" id="f-perday" value="1">
+          </div>
+          <div class="form-field form-select-row" id="reminderRow">
+            <span class="form-label">Reminder</span>
+            <span class="form-select-val" id="f-reminder-label">None</span>
+            <svg class="chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            <input type="hidden" id="f-reminder" value="none">
+          </div>
+        </div>
+      </div>
+
+      <!-- Icon -->
+      <div class="form-section">
+        <div class="form-section-title">Icon</div>
+        <div class="icon-grid" id="iconGrid"></div>
+        <button type="button" class="more-icons-btn" id="moreIconsBtn">More icons ›</button>
+      </div>
+
+      <!-- Color -->
+      <div class="form-section">
+        <div class="form-section-title">Color</div>
+        <div class="color-grid" id="colorGrid"></div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Add Habit</button>
+    </form>
+  </div>
+</div>
+
+<!-- STATS MODAL -->
+<div class="modal-overlay" id="statsModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">Statistics</div>
+      <button class="modal-close" id="statsClose">✕</button>
+    </div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div style="padding: 0 20px 8px;">
+      <div style="font-size: 12px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;">Habit Breakdown</div>
+      <div id="statsBreakdown"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">Settings</div>
+      <button class="modal-close" id="settingsClose">✕</button>
+    </div>
+    <div class="settings-list">
+      <div class="settings-item">
+        <span>App Version</span>
+        <span class="settings-item-right">1.0.0</span>
+      </div>
+      <div class="settings-item">
+        <span>Total Habits</span>
+        <span class="settings-item-right" id="settingsTotalHabits">0</span>
+      </div>
+      <div class="settings-item">
+        <span>Days Tracked</span>
+        <span class="settings-item-right" id="settingsDaysTracked">0</span>
+      </div>
+      <div class="settings-item" style="cursor:pointer;" id="clearDataBtn">
+        <span style="color:#ff3b30;">Clear All Data</span>
+        <svg style="width:14px;height:14px;fill:none;stroke:#ff3b30;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BACKFILL MODAL -->
+<div class="modal-overlay" id="backfillModal">
+  <div class="modal-sheet" style="max-height:70vh;">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="backfillTitle">Mark Past Day</div>
+      <button class="modal-close" id="backfillClose">✕</button>
+    </div>
+    <div style="padding:0 20px 8px;">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.5;">Select a past date to mark as complete. Tap a day to toggle it.</p>
+      <div id="backfillCal" style="margin-bottom:16px;"></div>
+      <p style="font-size:11px;color:var(--text3);text-align:center;padding-bottom:8px;">Changes save instantly. Tap again to unmark.</p>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-modal" id="confirmModal">
+  <div class="confirm-box">
+    <h3 id="confirmTitle">Delete Habit</h3>
+    <p id="confirmMsg">Are you sure you want to delete this habit? All progress will be lost.</p>
+    <div class="confirm-btns">
+      <button class="confirm-btn cancel" id="confirmCancel">Cancel</button>
+      <button class="confirm-btn danger" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+const ICONS_BASE = ['🚿','⏰','🍎','🛏','📅','❤️','🧘','🏋️','📚','💻','🕐','☯️','🎵','🌿','🎮','🚲','☕','💰','📝','💊','🏃','✍️','🎯','🧠','💪','🌅','🌙','🥗','💧','🔥'];
+const ICONS_MORE = ['🎸','🎨','🐕','🐈','🌸','⭐','🏠','✈️','🎓','🎤','🏊','⚽','🎾','🏂','🧗','🤸','🥋','🏌️','🎭','🎪','🌍','🧩','♟️','🎲','🃏','🎰','🔑','💡','🔬','🎬'];
+const COLORS = [
+  '#ff3b30','#ff6b35','#ff9500','#ffcc00','#30d158','#34c759',
+  '#00c7be','#32ade6','#007aff','#5e5ce6','#bf5af2','#ff2d55',
+  '#a2845e','#636366','#8e8e93','#aeaeb2','#ff6e40','#69d44b'
+];
+
+let habits = JSON.parse(localStorage.getItem('hk_habits') || '[]');
+let editingId = null;
+let selectedIcon = ICONS_BASE[0];
+let selectedColor = COLORS[8];
+let showingMoreIcons = false;
+let pendingConfirm = null;
+
+// ===== UTILS =====
+const $ = id => document.getElementById(id);
+// Use local date (not UTC) so timezone-behind-UTC users get correct "today"
+function today() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function fmtDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function openModal(id) { $(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeModal(id) { $(id).classList.remove('open'); document.body.style.overflow = ''; }
+
+function currentStreak(habit) {
+  let streak = 0;
+  const d = new Date();
+  while (true) {
+    const key = fmtDate(d);
+    if (habit.completions[key]) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else break;
+  }
+  return streak;
+}
+
+function longestStreak(habit) {
+  const dates = Object.keys(habit.completions).filter(k => habit.completions[k]).sort();
+  if (!dates.length) return 0;
+  let max = 1, cur = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(dates[i-1]), curr = new Date(dates[i]);
+    const diff = (curr - prev) / 86400000;
+    if (diff === 1) { cur++; max = Math.max(max, cur); }
+    else cur = 1;
+  }
+  return max;
+}
+
+function totalCompletions(habit) {
+  return Object.values(habit.completions).filter(Boolean).length;
+}
+
+// ===== CALENDAR =====
+function buildYearCalendar(habit, container) {
+  container.innerHTML = '';
+  const todayKey = today();
+  const todayDate = new Date(todayKey + 'T00:00:00');
+
+  // Start from Sunday of 52 weeks ago
+  const startDate = new Date(todayDate);
+  startDate.setDate(startDate.getDate() - startDate.getDay()); // start of this week
+  startDate.setDate(startDate.getDate() - 52 * 7);            // go back 52 weeks
+
+  const weeksContainer = document.createElement('div');
+  weeksContainer.style.cssText = 'display:flex;gap:1.5px;';
+
+  for (let w = 0; w < 53; w++) {
+    const weekCol = document.createElement('div');
+    weekCol.style.cssText = 'display:flex;flex-direction:column;gap:1.5px;';
+
+    for (let d = 0; d < 7; d++) {
+      const cellDate = new Date(startDate);
+      cellDate.setDate(startDate.getDate() + w * 7 + d);
+      const key = fmtDate(cellDate);
+      const isFuture = cellDate > todayDate;
+
+      const cell = document.createElement('div');
+      cell.className = 'cal-day';
+      cell.dataset.date = key;
+      cell.dataset.habitId = habit.id;
+
+      if (isFuture) {
+        cell.classList.add('future');
+      } else if (habit.completions[key]) {
+        cell.classList.add('done');
+        cell.style.background = habit.color;
+        cell.style.boxShadow = `0 0 4px ${habit.color}99`;
+      }
+      if (key === todayKey) {
+        cell.classList.add('today');
+        cell.style.outline = `1.5px solid ${habit.color}`;
+        cell.style.outlineOffset = '1px';
+      }
+
+      weekCol.appendChild(cell);
+    }
+    weeksContainer.appendChild(weekCol);
+  }
+
+  container.appendChild(weeksContainer);
+}
+
+// ===== RENDER HABITS =====
+function renderHabits() {
+  const list = $('habitList');
+  list.innerHTML = '';
+
+  if (!habits.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🌱</div>
+        <h2>No habits yet</h2>
+        <p>Start building positive habits.<br>Tap the + button to add your first habit.</p>
+        <button class="empty-cta" id="emptyCta">Add First Habit</button>
+      </div>`;
+    $('emptyCta').onclick = () => openAddModal();
+    return;
+  }
+
+  habits.forEach((habit, idx) => {
+    const card = document.createElement('div');
+    card.className = 'habit-card';
+    card.style.setProperty('--habit-color', habit.color);
+    card.dataset.id = habit.id;
+
+    const isToday = habit.completions[today()];
+    const streak = currentStreak(habit);
+    const total = totalCompletions(habit);
+    const longest = longestStreak(habit);
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="habit-icon" style="background:${habit.color}">${habit.icon}</div>
+          <div class="habit-info">
+            <div class="habit-name">${escHtml(habit.name)}</div>
+            ${habit.desc ? `<div class="habit-desc">${escHtml(habit.desc)}</div>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;flex-shrink:0;">
+          <button class="card-action-btn backfill-btn" data-id="${habit.id}" aria-label="Backfill day" title="Mark a past day">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+          </button>
+          <button class="check-btn ${isToday ? 'done' : ''}" data-id="${habit.id}" aria-label="Mark complete"
+            style="border-color:${habit.color};${isToday ? `background:${habit.color};box-shadow:0 0 12px ${habit.color};` : ''}">
+            <svg viewBox="0 0 24 24" style="stroke:${isToday ? 'white' : habit.color}"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="streak-row">
+        <span class="streak-badge" style="color:${habit.color};background:${habit.color}26">🔥 ${streak} day${streak !== 1 ? 's' : ''}</span>
+        <span class="streak-label">current streak</span>
+        ${habit.goal ? `<span class="streak-label" style="margin-left:auto">Goal: ${habit.goal}d</span>` : ''}
+      </div>
+      <div class="calendar-wrap"><div class="cal-container"></div></div>
+      <div class="card-footer">
+        <span class="card-stat"><strong>${total}</strong> total</span>
+        <span class="card-stat"><strong>${longest}</strong> best</span>
+        <div class="card-actions">
+          <button class="card-action-btn edit-btn" data-id="${habit.id}" aria-label="Edit">
+            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="card-action-btn delete-btn" data-id="${habit.id}" aria-label="Delete">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+      </div>`;
+
+    list.appendChild(card);
+
+    // Build calendar
+    buildYearCalendar(habit, card.querySelector('.cal-container'));
+
+    // Animate in with delay
+    card.style.animationDelay = `${idx * 40}ms`;
+  });
+
+  // Events
+  list.querySelectorAll('.check-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleDay(btn.dataset.id, today());
+    });
+  });
+  list.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+  });
+  list.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => confirmDelete(btn.dataset.id));
+  });
+  list.querySelectorAll('.backfill-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openBackfill(btn.dataset.id);
+    });
+  });
+
+  // Tap calendar squares to toggle any past day
+  list.querySelectorAll('.calendar-wrap').forEach(wrap => {
+    wrap.addEventListener('click', e => {
+      const cell = e.target.closest('.cal-day');
+      if (!cell || cell.classList.contains('future')) return;
+      const { date, habitId } = cell.dataset;
+      if (!date || !habitId) return;
+      toggleDay(habitId, date);
+    });
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleDay(id, key) {
+  const habit = habits.find(h => h.id === id);
+  if (!habit) return;
+  const wasOn = !!habit.completions[key];
+  if (wasOn) {
+    delete habit.completions[key];
+  } else {
+    habit.completions[key] = true;
+  }
+  save();
+
+  // If toggling today, animate the check button
+  if (key === today()) {
+    const btn = document.querySelector(`.check-btn[data-id="${id}"]`);
+    if (btn) {
+      const nowOn = !wasOn;
+      btn.classList.toggle('done', nowOn);
+      btn.style.borderColor = habit.color;
+      if (nowOn) {
+        btn.style.background = habit.color;
+        btn.style.boxShadow = `0 0 12px ${habit.color}`;
+        btn.querySelector('svg').style.stroke = 'white';
+      } else {
+        btn.style.background = '';
+        btn.style.boxShadow = '';
+        btn.querySelector('svg').style.stroke = habit.color;
+      }
+      btn.style.transform = 'scale(1.3)';
+      setTimeout(() => { btn.style.transform = ''; }, 200);
+    }
+  }
+
+  // Instantly update just the affected calendar cell (no full rebuild)
+  const cell = document.querySelector(`.cal-day[data-habit-id="${id}"][data-date="${key}"]`);
+  if (cell) {
+    const nowOn = !wasOn;
+    cell.classList.toggle('done', nowOn);
+    if (nowOn) {
+      cell.style.background = habit.color;
+      cell.style.boxShadow = `0 0 4px ${habit.color}99`;
+    } else {
+      cell.style.background = '';
+      cell.style.boxShadow = '';
+    }
+  }
+
+  // Update streak badge and footer stats
+  const card = document.querySelector(`.habit-card[data-id="${id}"]`);
+  if (card) {
+    const streak = currentStreak(habit);
+    const badge = card.querySelector('.streak-badge');
+    if (badge) {
+      badge.textContent = `🔥 ${streak} day${streak !== 1 ? 's' : ''}`;
+      badge.style.color = habit.color;
+      badge.style.background = `${habit.color}26`;
+    }
+    const stats = card.querySelectorAll('.card-stat');
+    if (stats[0]) stats[0].innerHTML = `<strong>${totalCompletions(habit)}</strong> total`;
+    if (stats[1]) stats[1].innerHTML = `<strong>${longestStreak(habit)}</strong> best`;
+  }
+
+  const label = key === today() ? (wasOn ? 'Unmarked today' : '✓ Done today!') : (wasOn ? 'Day unmarked' : `✓ ${key} marked!`);
+  showToast(label);
+}
+
+// ===== ICON GRID =====
+function buildIconGrid() {
+  const grid = $('iconGrid');
+  const icons = showingMoreIcons ? [...ICONS_BASE, ...ICONS_MORE] : ICONS_BASE;
+  grid.innerHTML = '';
+  icons.forEach(ic => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-option' + (ic === selectedIcon ? ' selected' : '');
+    btn.textContent = ic;
+    btn.dataset.icon = ic;
+    btn.onclick = () => {
+      selectedIcon = ic;
+      grid.querySelectorAll('.icon-option').forEach(b => b.classList.toggle('selected', b.dataset.icon === ic));
+    };
+    grid.appendChild(btn);
+  });
+  $('moreIconsBtn').textContent = showingMoreIcons ? 'Less icons ‹' : 'More icons ›';
+}
+
+// ===== COLOR GRID =====
+function buildColorGrid() {
+  const grid = $('colorGrid');
+  grid.innerHTML = '';
+  COLORS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'color-option' + (c === selectedColor ? ' selected' : '');
+    btn.style.background = c;
+    btn.style.color = c;
+    btn.dataset.color = c;
+    btn.onclick = () => {
+      selectedColor = c;
+      grid.querySelectorAll('.color-option').forEach(b => b.classList.toggle('selected', b.dataset.color === c));
+    };
+    grid.appendChild(btn);
+  });
+}
+
+// ===== MODAL OPEN/CLOSE =====
+function openAddModal() {
+  editingId = null;
+  selectedIcon = ICONS_BASE[0];
+  selectedColor = COLORS[8];
+  $('modalTitle').textContent = 'New Habit';
+  $('submitBtn').textContent = 'Add Habit';
+  $('f-name').value = '';
+  $('f-desc').value = '';
+  $('f-goal').value = 30; $('f-goal-val').textContent = 30;
+  $('f-perday').value = 1; $('f-perday-val').textContent = 1;
+  $('f-reminder').value = 'none'; $('f-reminder-label').textContent = 'None';
+  showingMoreIcons = false;
+  buildIconGrid();
+  buildColorGrid();
+  openModal('habitModal');
+  setTimeout(() => $('f-name').focus(), 400);
+}
+
+function openEditModal(id) {
+  const habit = habits.find(h => h.id === id);
+  if (!habit) return;
+  editingId = id;
+  selectedIcon = habit.icon;
+  selectedColor = habit.color;
+  $('modalTitle').textContent = 'Edit Habit';
+  $('submitBtn').textContent = 'Save Changes';
+  $('f-name').value = habit.name;
+  $('f-desc').value = habit.desc || '';
+  $('f-goal').value = habit.goal || 30; $('f-goal-val').textContent = habit.goal || 30;
+  $('f-perday').value = habit.perday || 1; $('f-perday-val').textContent = habit.perday || 1;
+  showingMoreIcons = false;
+  buildIconGrid();
+  buildColorGrid();
+  openModal('habitModal');
+}
+
+// ===== FORM SUBMIT =====
+$('habitForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('f-name').value.trim();
+  if (!name) return;
+
+  if (editingId) {
+    const habit = habits.find(h => h.id === editingId);
+    if (habit) {
+      habit.name = name;
+      habit.desc = $('f-desc').value.trim();
+      habit.goal = parseInt($('f-goal').value) || 30;
+      habit.perday = parseInt($('f-perday').value) || 1;
+      habit.icon = selectedIcon;
+      habit.color = selectedColor;
+    }
+    showToast('Habit updated!');
+  } else {
+    habits.push({
+      id: uid(),
+      name,
+      desc: $('f-desc').value.trim(),
+      icon: selectedIcon,
+      color: selectedColor,
+      goal: parseInt($('f-goal').value) || 30,
+      perday: parseInt($('f-perday').value) || 1,
+      completions: {},
+      created: today()
+    });
+    showToast('Habit added!');
+  }
+  save();
+  closeModal('habitModal');
+  renderHabits();
+});
+
+// ===== STEPPERS =====
+document.querySelectorAll('.step-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.target;
+    const valEl = $(`${target}-val`);
+    const hidden = $(target);
+    let v = parseInt(hidden.value) + parseInt(btn.dataset.step);
+    const mins = { 'f-goal': 1, 'f-perday': 1 };
+    const maxs = { 'f-goal': 365, 'f-perday': 10 };
+    v = Math.max(mins[target] || 1, Math.min(maxs[target] || 99, v));
+    hidden.value = v;
+    valEl.textContent = v;
+  });
+});
+
+// ===== MORE ICONS =====
+$('moreIconsBtn').addEventListener('click', () => {
+  showingMoreIcons = !showingMoreIcons;
+  buildIconGrid();
+});
+
+// ===== REMINDER PICKER =====
+const REMINDER_OPTS = ['None','Morning (8:00 AM)','Afternoon (12:00 PM)','Evening (6:00 PM)','Night (9:00 PM)'];
+let reminderIdx = 0;
+$('reminderRow').addEventListener('click', () => {
+  reminderIdx = (reminderIdx + 1) % REMINDER_OPTS.length;
+  $('f-reminder-label').textContent = REMINDER_OPTS[reminderIdx];
+  $('f-reminder').value = REMINDER_OPTS[reminderIdx];
+});
+
+// ===== CLOSE MODALS =====
+$('modalClose').onclick = () => closeModal('habitModal');
+$('statsClose').onclick = () => closeModal('statsModal');
+$('settingsClose').onclick = () => closeModal('settingsModal');
+
+['habitModal','statsModal','settingsModal'].forEach(id => {
+  $(id).addEventListener('click', e => {
+    if (e.target === $(id)) closeModal(id);
+  });
+});
+
+// ===== NAV BUTTONS =====
+$('addBtn').onclick = openAddModal;
+$('statsBtn').onclick = () => { buildStats(); openModal('statsModal'); };
+$('settingsBtn').onclick = () => {
+  $('settingsTotalHabits').textContent = habits.length;
+  const allDays = new Set();
+  habits.forEach(h => Object.keys(h.completions).forEach(k => allDays.add(k)));
+  $('settingsDaysTracked').textContent = allDays.size;
+  openModal('settingsModal');
+};
+
+// ===== STATS =====
+function buildStats() {
+  const totalH = habits.length;
+  const totalC = habits.reduce((s,h) => s + totalCompletions(h), 0);
+  const bestStreak = habits.reduce((m,h) => Math.max(m, longestStreak(h)), 0);
+  const todayC = habits.filter(h => h.completions[today()]).length;
+
+  $('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-num" style="color:${COLORS[8]}">${totalH}</div><div class="stat-name">Total Habits</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:${COLORS[4]}">${totalC}</div><div class="stat-name">Total Check-ins</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:${COLORS[10]}">${bestStreak}</div><div class="stat-name">Best Streak</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:${COLORS[2]}">${todayC}</div><div class="stat-name">Done Today</div></div>`;
+
+  const breakdown = $('statsBreakdown');
+  breakdown.innerHTML = '';
+  if (!habits.length) {
+    breakdown.innerHTML = '<p style="color:var(--text3);font-size:13px;padding:8px 0;">No habits yet</p>';
+    return;
+  }
+  habits.forEach(h => {
+    const s = currentStreak(h);
+    const t = totalCompletions(h);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);';
+    row.innerHTML = `
+      <div style="width:32px;height:32px;border-radius:9px;background:${h.color};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${h.icon}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(h.name)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:1px">${t} completions · ${s} day streak</div></div>
+      <div style="font-size:13px;font-weight:700;color:${h.color}">🔥${s}</div>`;
+    breakdown.appendChild(row);
+  });
+}
+
+// ===== DELETE =====
+function confirmDelete(id) {
+  pendingConfirm = id;
+  const habit = habits.find(h => h.id === id);
+  $('confirmTitle').textContent = `Delete "${habit?.name}"?`;
+  $('confirmMsg').textContent = 'All progress and history for this habit will be permanently lost.';
+  $('confirmOk').textContent = 'Delete';
+  $('confirmOk').className = 'confirm-btn danger';
+  $('confirmModal').classList.add('open');
+}
+
+$('confirmOk').addEventListener('click', () => {
+  if (pendingConfirm === 'clearAll') {
+    habits = [];
+    save();
+    renderHabits();
+    showToast('All data cleared');
+    closeModal('settingsModal');
+  } else if (pendingConfirm) {
+    habits = habits.filter(h => h.id !== pendingConfirm);
+    save();
+    renderHabits();
+    showToast('Habit deleted');
+  }
+  pendingConfirm = null;
+  $('confirmModal').classList.remove('open');
+});
+
+$('confirmCancel').addEventListener('click', () => {
+  pendingConfirm = null;
+  $('confirmModal').classList.remove('open');
+});
+
+// ===== CLEAR DATA =====
+$('clearDataBtn').addEventListener('click', () => {
+  pendingConfirm = 'clearAll';
+  $('confirmTitle').textContent = 'Clear All Data?';
+  $('confirmMsg').textContent = 'This will permanently delete all habits and progress. This cannot be undone.';
+  $('confirmOk').textContent = 'Clear All';
+  $('confirmOk').className = 'confirm-btn danger';
+  $('confirmModal').classList.add('open');
+});
+
+// ===== BACKFILL =====
+let backfillHabitId = null;
+
+$('backfillClose').onclick = () => closeModal('backfillModal');
+$('backfillModal').addEventListener('click', e => {
+  if (e.target === $('backfillModal')) closeModal('backfillModal');
+});
+
+function openBackfill(id) {
+  const habit = habits.find(h => h.id === id);
+  if (!habit) return;
+  backfillHabitId = id;
+  $('backfillTitle').textContent = `${habit.icon} ${habit.name}`;
+  renderBackfillCal(habit);
+  openModal('backfillModal');
+}
+
+function renderBackfillCal(habit) {
+  const container = $('backfillCal');
+  container.innerHTML = '';
+  container.style.setProperty('--bf-color', habit.color);
+
+  const todayKey = today();
+  const todayDate = new Date(todayKey + 'T00:00:00');
+
+  // Show last 3 months (current + 2 prior)
+  const months = [];
+  for (let i = 2; i >= 0; i--) {
+    const d = new Date(todayDate.getFullYear(), todayDate.getMonth() - i, 1);
+    months.push({ year: d.getFullYear(), month: d.getMonth() });
+  }
+
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  months.forEach(({ year, month }) => {
+    const block = document.createElement('div');
+    block.className = 'backfill-month';
+
+    const title = document.createElement('div');
+    title.className = 'backfill-month-name';
+    title.textContent = `${MONTH_NAMES[month]} ${year}`;
+    block.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'backfill-grid';
+
+    // Day-of-week headers
+    DOW.forEach(d => {
+      const h = document.createElement('div');
+      h.className = 'backfill-dow';
+      h.textContent = d;
+      grid.appendChild(h);
+    });
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'backfill-day empty';
+      grid.appendChild(empty);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const cellDate = new Date(year, month, d);
+      const isFuture = cellDate > todayDate && key !== todayKey;
+      const isToday = key === todayKey;
+
+      const cell = document.createElement('div');
+      cell.className = 'backfill-day';
+      cell.textContent = d;
+      cell.dataset.date = key;
+
+      if (isFuture) {
+        cell.classList.add('future');
+      } else if (habit.completions[key]) {
+        cell.classList.add('done');
+        cell.style.background = habit.color;
+        cell.style.boxShadow = `0 0 8px ${habit.color}80`;
+      }
+      if (isToday) {
+        cell.classList.add('today-cell');
+        cell.style.outline = `2px solid ${habit.color}`;
+      }
+
+      cell.addEventListener('click', () => {
+        if (isFuture) return;
+        const h = habits.find(hb => hb.id === backfillHabitId);
+        if (!h) return;
+        const wasOn = !!h.completions[key];
+        if (wasOn) { delete h.completions[key]; } else { h.completions[key] = true; }
+        save();
+        const nowOn = !wasOn;
+        cell.classList.toggle('done', nowOn);
+        if (nowOn) {
+          cell.style.background = h.color;
+          cell.style.boxShadow = `0 0 8px ${h.color}80`;
+        } else {
+          cell.style.background = '';
+          cell.style.boxShadow = '';
+        }
+
+        // Also update the mini calendar on the card
+        const miniCell = document.querySelector(`.cal-day[data-habit-id="${backfillHabitId}"][data-date="${key}"]`);
+        if (miniCell) {
+          miniCell.classList.toggle('done', nowOn);
+          if (nowOn) {
+            miniCell.style.background = h.color;
+            miniCell.style.boxShadow = `0 0 4px ${h.color}99`;
+          } else {
+            miniCell.style.background = '';
+            miniCell.style.boxShadow = '';
+          }
+        }
+
+        // Update streak + stats on card
+        const card = document.querySelector(`.habit-card[data-id="${backfillHabitId}"]`);
+        if (card) {
+          const streak = currentStreak(h);
+          const badge = card.querySelector('.streak-badge');
+          if (badge) {
+            badge.textContent = `🔥 ${streak} day${streak !== 1 ? 's' : ''}`;
+            badge.style.color = h.color;
+            badge.style.background = `${h.color}26`;
+          }
+          const stats = card.querySelectorAll('.card-stat');
+          if (stats[0]) stats[0].innerHTML = `<strong>${totalCompletions(h)}</strong> total`;
+          if (stats[1]) stats[1].innerHTML = `<strong>${longestStreak(h)}</strong> best`;
+        }
+
+        showToast(wasOn ? 'Day unmarked' : `✓ ${key} marked!`);
+      });
+
+      grid.appendChild(cell);
+    }
+
+    block.appendChild(grid);
+    container.appendChild(block);
+  });
+}
+
+// ===== SAVE =====
+function save() {
+  localStorage.setItem('hk_habits', JSON.stringify(habits));
+}
+
+// ===== DATE LABEL =====
+function updateDateLabel() {
+  const now = new Date();
+  const opts = { weekday: 'long', month: 'long', day: 'numeric' };
+  $('dateLabel').textContent = now.toLocaleDateString('en-US', opts);
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['habitModal','statsModal','settingsModal','backfillModal'].forEach(id => {
+      if ($(id).classList.contains('open')) closeModal(id);
+    });
+    $('confirmModal').classList.remove('open');
+  }
+});
+
+// ===== INIT =====
+updateDateLabel();
+renderHabits();
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
